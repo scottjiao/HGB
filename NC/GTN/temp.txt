@@ -1,0 +1,7 @@
+test acc: 0.93511 
+    epochs: 60
+    lr: 0.006794711058361855
+    node_dim: 85
+    num_channels: 4
+    num_layers: 5
+    weight_decay: 0.00674380439679655

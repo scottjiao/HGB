@@ -1,0 +1,42 @@
+test acc: 0.91552 
+  Value: 0.9397821664810181    epoch: 80
+    lr: 0.002863980489644659
+    node_dim: 122
+    num_channels: 2
+    num_layers: 5
+    weight_decay: 0.00912111823250298
+test acc: 0.91176 
+  Value: 0.9397821664810181    epoch: 80
+    lr: 0.002863980489644659
+    node_dim: 122
+    num_channels: 2
+    num_layers: 5
+    weight_decay: 0.00912111823250298
+test acc: 0.91988 
+  Value: 0.9401504039764405    epoch: 100
+    lr: 0.006353401833630073
+    node_dim: 47
+    num_channels: 4
+    num_layers: 2
+    weight_decay: 0.0073222557756812984
+test acc: 0.91556 
+  Value: 0.9401504039764405    epoch: 100
+    lr: 0.006353401833630073
+    node_dim: 47
+    num_channels: 4
+    num_layers: 2
+    weight_decay: 0.0073222557756812984
+test acc: 0.91303 
+  Value: 0.9401504039764405    epoch: 100
+    lr: 0.006353401833630073
+    node_dim: 47
+    num_channels: 4
+    num_layers: 2
+    weight_decay: 0.0073222557756812984
+test acc: 0.91642 
+  Value: 0.9401504039764405    epoch: 100
+    lr: 0.006353401833630073
+    node_dim: 47
+    num_channels: 4
+    num_layers: 2
+    weight_decay: 0.0073222557756812984

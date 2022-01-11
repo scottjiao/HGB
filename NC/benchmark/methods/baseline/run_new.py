@@ -2,16 +2,27 @@ import sys
 sys.path.append('../../')
 import time
 import argparse
-
+import os
 import torch
 import torch.nn.functional as F
 import numpy as np
-
+import random
 from utils.pytorchtools import EarlyStopping
 from utils.data import load_data
 #from utils.tools import index_generator, evaluate_results_nc, parse_minibatch
 from GNN import myGAT
 import dgl
+
+feature_usage_dict={0:"loaded features",
+1:"only target node features (zero vec for others)",
+2:"only target node features (id vec for others)",
+3:"all id vec. Default is 2",
+4:"only term features (id vec for others)",
+5:"only term features (zero vec for others)",
+}
+
+
+
 
 def sp_to_spt(mat):
     coo = mat.tocoo()
@@ -32,7 +43,17 @@ def mat2tensor(mat):
 def run_model_DBLP(args):
     feats_type = args.feats_type
     features_list, adjM, labels, train_val_test_idx, dl = load_data(args.dataset)
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    exp_info=f"dataset information :\n\tnode num: {adjM.shape[0]}\n\t\tattribute num: {features_list[0].shape[1]}\n\t\tnode type_num: {len(features_list)}\n\t\tnode type dist: {dl.nodes['count']}"+\
+                   f"\n\tedge num: {adjM.nnz}"+\
+                   f"\n\tclass num: {max(labels)+1}"+\
+                   f"\n\tlabel num: {len(train_val_test_idx['train_idx'])+len(train_val_test_idx['val_idx'])+len(train_val_test_idx['test_idx'])} \n\t\ttrain labels num: {len(train_val_test_idx['train_idx'])}\n\t\tval labels num: {len(train_val_test_idx['val_idx'])}\n\t\ttest labels num: {len(train_val_test_idx['test_idx'])}"+"\n"+f"feature usage: {feature_usage_dict[args.feats_type]}"+"\n"+f"exp setting: {vars(args)}"
+    print(exp_info)
+
+    torch.manual_seed(1234)
+    random.seed(1234)
+    np.random.seed(1234)
+
+    device = torch.device(f'cuda' if torch.cuda.is_available() else 'cpu')
     features_list = [mat2tensor(features).to(device) for features in features_list]
     if feats_type == 0:
         in_dims = [features.shape[1] for features in features_list]
@@ -96,8 +117,11 @@ def run_model_DBLP(args):
         v = v.cpu().item()
         e_feat.append(edge2type[(u,v)])
     e_feat = torch.tensor(e_feat, dtype=torch.long).to(device)
-
-    for _ in range(args.repeat):
+    
+    ma_F1s=[]
+    mi_F1s=[]
+    for re in range(args.repeat):
+        t_re0=time.time()
         num_classes = dl.labels_train['num_classes']
         heads = [args.num_heads] * args.num_layers + [1]
         net = myGAT(g, args.edge_feats, len(dl.links['count'])*2+1, in_dims, args.hidden_dim, num_classes, args.num_layers, heads, F.elu, args.dropout, args.dropout, args.slope, True, 0.05)
@@ -106,9 +130,9 @@ def run_model_DBLP(args):
 
         # training loop
         net.train()
-        early_stopping = EarlyStopping(patience=args.patience, verbose=True, save_path='checkpoint/checkpoint_{}_{}.pt'.format(args.dataset, args.num_layers))
+        early_stopping = EarlyStopping(patience=args.patience, verbose=True, save_path='checkpoint/checkpoint_{}_{}_re_{}_feat_{}.pt'.format(args.dataset, args.num_layers,re,args.feats_type))
         for epoch in range(args.epoch):
-            t_start = time.time()
+            t_0_start = time.time()
             # training
             net.train()
 
@@ -121,22 +145,22 @@ def run_model_DBLP(args):
             train_loss.backward()
             optimizer.step()
 
-            t_end = time.time()
+            t_0_end = time.time()
 
-            # print training info
-            print('Epoch {:05d} | Train_Loss: {:.4f} | Time: {:.4f}'.format(epoch, train_loss.item(), t_end-t_start))
+            # 
+            #print('Epoch {:05d} '.format(epoch, )
 
-            t_start = time.time()
+            t_1_start = time.time()
             # validation
             net.eval()
             with torch.no_grad():
                 logits = net(features_list, e_feat)
                 logp = F.log_softmax(logits, 1)
                 val_loss = F.nll_loss(logp[val_idx], labels[val_idx])
-            t_end = time.time()
+            t_1_end = time.time()
             # print validation info
-            print('Epoch {:05d} | Val_Loss {:.4f} | Time(s) {:.4f}'.format(
-                epoch, val_loss.item(), t_end - t_start))
+            print('Epoch {:05d} | Train_Loss: {:.4f} | train Time: {:.4f} | Val_Loss {:.4f} | train Time(s) {:.4f}'.format(
+                epoch, train_loss.item(), t_0_end-t_0_start,val_loss.item(), t_1_end - t_1_start))
             # early stopping
             early_stopping(val_loss, net)
             if early_stopping.early_stop:
@@ -144,7 +168,7 @@ def run_model_DBLP(args):
                 break
 
         # testing with evaluate_results_nc
-        net.load_state_dict(torch.load('checkpoint/checkpoint_{}_{}.pt'.format(args.dataset, args.num_layers)))
+        net.load_state_dict(torch.load('checkpoint/checkpoint_{}_{}_re_{}_feat_{}.pt'.format(args.dataset, args.num_layers,re,args.feats_type)))
         net.eval()
         test_logits = []
         with torch.no_grad():
@@ -152,9 +176,17 @@ def run_model_DBLP(args):
             test_logits = logits[test_idx]
             pred = test_logits.cpu().numpy().argmax(axis=1)
             onehot = np.eye(num_classes, dtype=np.int32)
-            dl.gen_file_for_evaluate(test_idx=test_idx, label=pred, file_name=f"{args.dataset}_{args.run}.txt")
+            dl.gen_file_for_evaluate(test_idx=test_idx, label=pred, file_path=f"{args.dataset}_{args.run}.txt")
             pred = onehot[pred]
-            print(dl.evaluate(pred))
+            d=dl.evaluate(pred)
+            print(d)
+        ma_F1s.append(d["macro-f1"])
+        mi_F1s.append(d["micro-f1"])
+        t_re1=time.time();t_re=t_re1-t_re0
+        print(f" this round cost {t_re}(s)")
+    print(f"mean and std of macro-f1: {  100*np.mean(np.array(ma_F1s)) :.1f}\u00B1{  100*np.std(np.array(ma_F1s)) :.1f}")
+    print(f"mean and std of micro-f1: {  100*np.mean(np.array(mi_F1s)) :.1f}\u00B1{  100*np.std(np.array(mi_F1s)) :.1f}")
+    print(exp_info)
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description='MRGNN testing for the DBLP dataset')
@@ -170,7 +202,7 @@ if __name__ == '__main__':
     ap.add_argument('--num-heads', type=int, default=8, help='Number of the attention heads. Default is 8.')
     ap.add_argument('--epoch', type=int, default=300, help='Number of epochs.')
     ap.add_argument('--patience', type=int, default=30, help='Patience.')
-    ap.add_argument('--repeat', type=int, default=1, help='Repeat the training and testing for N times. Default is 1.')
+    ap.add_argument('--repeat', type=int, default=10, help='Repeat the training and testing for N times. Default is 1.')
     ap.add_argument('--num-layers', type=int, default=2)
     ap.add_argument('--lr', type=float, default=5e-4)
     ap.add_argument('--dropout', type=float, default=0.5)
@@ -179,6 +211,12 @@ if __name__ == '__main__':
     ap.add_argument('--dataset', type=str)
     ap.add_argument('--edge-feats', type=int, default=64)
     ap.add_argument('--run', type=int, default=1)
+    ap.add_argument('--gpu', type=str, default="0")
 
     args = ap.parse_args()
+
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+
+    #torch.cuda.set_device(int(args.gpu))
+    #device=torch.device(f"cuda:{int(args.gpu)}")
     run_model_DBLP(args)

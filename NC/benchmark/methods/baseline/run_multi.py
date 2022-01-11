@@ -2,7 +2,7 @@ import sys
 sys.path.append('../../')
 import time
 import argparse
-
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -148,7 +148,7 @@ def run_model_DBLP(args):
             logits = net(features_list, e_feat)
             test_logits = logits[test_idx]
             pred = (test_logits.cpu().numpy()>0).astype(int)
-            dl.gen_file_for_evaluate(test_idx=test_idx, label=pred, file_name=f"{args.dataset}_{args.run}.txt", mode='multi')
+            dl.gen_file_for_evaluate(test_idx=test_idx, label=pred, file_path=f"{args.dataset}_{args.run}.txt", mode='multi')
             print(dl.evaluate(pred))
 
 
@@ -175,6 +175,14 @@ if __name__ == '__main__':
     ap.add_argument('--dataset', type=str)
     ap.add_argument('--edge-feats', type=int, default=64)
     ap.add_argument('--run', type=int, default=1)
+    ap.add_argument('--gpu', type=str, default="0")
 
     args = ap.parse_args()
+
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+
+    torch.cuda.set_device(int(args.gpu))
+    device=torch.device(f"cuda:{int(args.gpu)}")
+
+
     run_model_DBLP(args)

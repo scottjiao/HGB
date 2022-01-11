@@ -47,7 +47,7 @@ class GCNConv(MessagePassing):
         self.improved = improved
         self.cached = cached
         self.cached_result = None
-
+        self.param_=True
         self.weight = Parameter(torch.Tensor(in_channels, out_channels))
 
         if bias:
@@ -89,9 +89,13 @@ class GCNConv(MessagePassing):
         return edge_index, deg_inv_sqrt[col] * edge_weight
 
 
-    def forward(self, x, edge_index, edge_weight=None):
+    def forward(self, x, edge_index, edge_weight=None,param_=True):
         """"""
-        x = torch.matmul(x, self.weight)
+        if param_:
+            x = torch.matmul(x, self.weight)
+            self.param_=True
+        else:
+            self.param_=False
 
         if not self.cached or self.cached_result is None:
             edge_index, norm = self.norm(edge_index, x.size(0), edge_weight,
@@ -106,7 +110,7 @@ class GCNConv(MessagePassing):
         return norm.view(-1, 1) * x_j
 
     def update(self, aggr_out):
-        if self.bias is not None:
+        if (self.bias is not None) and (self.param_ is not False):
             aggr_out = aggr_out + self.bias
         return aggr_out
 

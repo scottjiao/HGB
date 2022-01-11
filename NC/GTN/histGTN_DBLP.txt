@@ -1,0 +1,28 @@
+test acc: 0.93307 
+  Value: 0.9548364281654358    epoch: 60
+    lr: 0.01288648592421699
+    node_dim: 43
+    num_channels: 3
+    num_layers: 4
+    weight_decay: 0.009227339992638639
+test acc: 0.93482 
+  Value: 0.9548364281654358    epoch: 60
+    lr: 0.01288648592421699
+    node_dim: 43
+    num_channels: 3
+    num_layers: 4
+    weight_decay: 0.009227339992638639
+test acc: 0.93499 
+  Value: 0.9548364281654358    epoch: 60
+    lr: 0.01288648592421699
+    node_dim: 43
+    num_channels: 3
+    num_layers: 4
+    weight_decay: 0.009227339992638639
+test acc: 0.93511 
+  Value: 0.9548364281654358    epoch: 60
+    lr: 0.01288648592421699
+    node_dim: 43
+    num_channels: 3
+    num_layers: 4
+    weight_decay: 0.009227339992638639

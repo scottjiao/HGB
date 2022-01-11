@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import math
 from matplotlib import pyplot as plt
 import pdb
-
+import time 
 
 class GTN(nn.Module):
     
@@ -108,7 +108,7 @@ class GTLayer(nn.Module):
         if self.first == True:
             a = self.conv1(A)
             b = self.conv2(A)
-            H = torch.bmm(a,b)
+            H = torch.bmm(a,b)   #batch matrix multiplication
             W = [(F.softmax(self.conv1.weight, dim=1)).detach(),(F.softmax(self.conv2.weight, dim=1)).detach()]
         else:
             a = self.conv1(A)

@@ -1,3 +1,5 @@
+
+
 import torch
 import numpy as np
 import torch.nn as nn
@@ -103,6 +105,7 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             model.eval()
+            print(Ws)
             # Valid
             with torch.no_grad():
                 val_loss, y_valid,_ = model.forward(A, node_features, valid_node, valid_target)

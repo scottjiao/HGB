@@ -278,6 +278,11 @@ class data_loader:
                         [ shift[node_type], shift[node_type]+count[node_type] )
         """
         nodes = {'total':0, 'count':Counter(), 'attr':{}, 'shift':{}}
+        print(self.path)
+        #with open(os.path.join(self.path, 'new.txt'), 'w') as f:
+            #f.write("1")
+
+
         with open(os.path.join(self.path, 'node.dat'), 'r', encoding='utf-8') as f:
             for line in f:
                 th = line.split('\t')
